@@ -31,3 +31,10 @@ Run `npm run build`. The generated site is placed in `dist/`.
 
 ## Suggested next milestone
 Add persistent progress (local storage first), verify and cite the calculation methodology, then add a backend only when the MVP is stable.
+
+
+## Midterm demo polish
+- Daily action checklist progress is saved in the browser for the current day (local device only).
+- A reset control is available in the daily-actions progress card for repeatable live demonstrations.
+- Keyboard focus styling has been added for more accessible navigation.
+- The carbon estimator remains a simplified educational illustration, not a validated carbon audit.

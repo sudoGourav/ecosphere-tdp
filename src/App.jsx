@@ -29,7 +29,15 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [form, setForm] = useState({ travel: '8', electricity: '3', diet: 'mixed' });
   const [estimate, setEstimate] = useState(null);
-  const [done, setDone] = useState([]);
+  const [done, setDone] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('ecosphere-actions') || '{}');
+      const today = new Date().toLocaleDateString('en-CA');
+      return saved.date === today && Array.isArray(saved.done) ? saved.done : [];
+    } catch {
+      return [];
+    }
+  });
   const [showAll, setShowAll] = useState(false);
 
   const progress = Math.round((done.length / actions.length) * 100);
@@ -45,7 +53,27 @@ function App() {
   }
 
   function toggleAction(id) {
-    setDone(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
+    setDone(current => {
+      const next = current.includes(id) ? current.filter(item => item !== id) : [...current, id];
+      try {
+        localStorage.setItem('ecosphere-actions', JSON.stringify({
+          date: new Date().toLocaleDateString('en-CA'),
+          done: next
+        }));
+      } catch {
+        // The checklist still works for this session if storage is unavailable.
+      }
+      return next;
+    });
+  }
+
+  function resetActions() {
+    setDone([]);
+    try {
+      localStorage.removeItem('ecosphere-actions');
+    } catch {
+      // Ignore storage restrictions; the in-memory reset still works.
+    }
   }
 
   function jumpTo(id) {
@@ -147,7 +175,7 @@ function App() {
         <section className="actions-section section-pad" id="actions">
           <div className="section-heading action-heading">
             <div><div className="eyebrow"><span className="eyebrow-dot" /> SMALL ACTIONS, REAL MOMENTUM</div><h2>Make today a little<br /><em>greener.</em></h2></div>
-            <div className="progress-card"><div className="progress-top"><span>TODAY'S ACTIONS</span><b>{done.length} OF {actions.length}</b></div><div className="progress-track"><span style={{ width: `${progress}%` }}></span></div><small>{progress === 100 ? 'Amazing — you completed today’s list!' : `${progress}% complete · Every step counts`}</small></div>
+            <div className="progress-card"><div className="progress-top"><span>TODAY'S ACTIONS</span><b>{done.length} OF {actions.length}</b></div><div className="progress-track" role="progressbar" aria-label="Daily climate actions completed" aria-valuemin="0" aria-valuemax={actions.length} aria-valuenow={done.length}><span style={{ width: `${progress}%` }}></span></div><small>{progress === 100 ? 'Amazing — you completed today’s list!' : `${progress}% complete · Every step counts`}</small><button className="reset-actions" type="button" onClick={resetActions} disabled={done.length === 0}>Reset checklist</button></div>
           </div>
           <div className="actions-grid">
             {actions.map((action, index) => {
@@ -159,7 +187,7 @@ function App() {
               </button>;
             })}
           </div>
-          <div className="action-footnote"><Leaf size={17}/><span>Your checklist is stored in this page's current session only. Saving progress between visits is planned for a later version.</span></div>
+          <div className="action-footnote"><Leaf size={17}/><span>Your daily checklist is saved in this browser and resets for a new day. Progress is stored on this device only.</span></div>
         </section>
 
         <section className="learn-section section-pad" id="learn">
