@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import CorporateEmissions from './CorporateEmissions.jsx';
 import {
   ArrowDownRight, ArrowRight, Check, ChevronRight, CloudSun, Droplets,
   Earth, Leaf, Menu, Recycle, Sprout, Sun, Trees, Wind, X, Zap,
@@ -230,6 +231,7 @@ function App() {
         <nav className={menuOpen ? 'nav nav-open' : 'nav'}>
           <a href="#impact" onClick={() => setMenuOpen(false)}>Your impact</a>
           <a href="#tracker" onClick={() => setMenuOpen(false)}>Track data</a>
+          <a href="#corporate" onClick={() => setMenuOpen(false)}>Companies</a>
           <a href="#news" onClick={() => setMenuOpen(false)}>Climate pulse</a>
           <a href="#actions" onClick={() => setMenuOpen(false)}>Take action</a>
           <a href="#learn" onClick={() => setMenuOpen(false)}>Explore</a>
@@ -376,6 +378,8 @@ function App() {
           </div>
           <p className="tracker-disclaimer">Method note: starter factors are simplified illustrative defaults, not official location-specific factors. Real emissions vary by grid mix, vehicle, occupancy, waste treatment and methodology. Use verified local factors before research or policy decisions.</p>
         </section>
+
+        <CorporateEmissions />
 
         <section className="actions-section section-pad" id="actions">
           <div className="section-heading action-heading">

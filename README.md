@@ -49,3 +49,18 @@ Add persistent progress (local storage first), verify and cite the calculation m
 
 ### Emissions estimate caveat
 The tracker uses simplified starter factors (car 0.21 kg CO2e/km, bus 0.08 kg CO2e/km, electricity 0.70 kg CO2e/kWh, waste 0.50 kg CO2e/kg, air travel 0.15 kg CO2e/passenger-km). These are illustrative placeholders, not official location-specific factors or a validated carbon audit. Replace them with documented, geographically appropriate factors before using the results for research or decisions.
+
+## Corporate emissions explorer (new)
+
+The `Companies` navigation link opens a corporate/industrial emissions section. It requests public source records from the Climate TRACE API (`https://api.climatetrace.org/v7/sources`) for the selected year and provides client-side search/filtering, a source table, refresh control, and official data/report links. It does not substitute sample figures when the API fails.
+
+### Important limitations
+- Climate TRACE records may represent individual facilities/assets, not consolidated company-wide inventories. Ownership or location may be absent.
+- API fields and access behavior may change; the section handles common response formats but should be tested in the target browser. If CORS/network/API errors occur, use the linked API documentation and NSE BRSR disclosure portal.
+- Do not call an asset total a company's Scope 1/2/3 total unless source methodology explicitly supports that comparison. Never interpret missing data as zero emissions.
+- NSE India BRSR reports are public filings but are not automatically parsed into the live table. CDP's detailed corporate datasets may require a license.
+
+Useful sources:
+- Climate TRACE API docs: https://api.climatetrace.org/v7/docs/index.html
+- NSE India BRSR filings: https://www.nseindia.com/companies-listing/corporate-filings-bussiness-sustainabilitiy-reports
+- CDP data: https://www.cdp.net/en/data
