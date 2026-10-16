@@ -38,3 +38,14 @@ Add persistent progress (local storage first), verify and cite the calculation m
 - A reset control is available in the daily-actions progress card for repeatable live demonstrations.
 - Keyboard focus styling has been added for more accessible navigation.
 - The carbon estimator remains a simplified educational illustration, not a validated carbon audit.
+
+
+## Impact tracking features
+- Log car travel, bus travel, electricity use, general waste, and air travel with a date and optional note.
+- View local activity totals, a seven-day logged-emissions trend, category breakdown, and recent activity records.
+- Activity records persist in browser localStorage on the current device; no account or cloud sync is implemented.
+- Delete individual records or clear all local records.
+- Climate Pulse contains dated links to Carbon Brief and Reuters reporting, with positive developments and challenges separated for context.
+
+### Emissions estimate caveat
+The tracker uses simplified starter factors (car 0.21 kg CO2e/km, bus 0.08 kg CO2e/km, electricity 0.70 kg CO2e/kWh, waste 0.50 kg CO2e/kg, air travel 0.15 kg CO2e/passenger-km). These are illustrative placeholders, not official location-specific factors or a validated carbon audit. Replace them with documented, geographically appropriate factors before using the results for research or decisions.

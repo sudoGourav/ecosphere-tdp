@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import {
   ArrowDownRight, ArrowRight, Check, ChevronRight, CloudSun, Droplets,
-  Earth, Leaf, Menu, Recycle, Sprout, Sun, Trees, Wind, X, Zap
+  Earth, Leaf, Menu, Recycle, Sprout, Sun, Trees, Wind, X, Zap,
+  Activity, CalendarDays, Car, Bus, Trash2, Plus, Newspaper, ExternalLink, TrendingUp
 } from 'lucide-react';
 
 const actions = [
@@ -25,6 +26,58 @@ function estimateFootprint({ travel, electricity, diet }) {
   return (transport + power + food).toFixed(1);
 }
 
+
+const activityTypes = [
+  { id: 'car', label: 'Car travel', unit: 'km', factor: 0.21, icon: Car, category: 'Transport', hint: 'Distance travelled by car' },
+  { id: 'bus', label: 'Bus travel', unit: 'km', factor: 0.08, icon: Bus, category: 'Transport', hint: 'Distance travelled by bus' },
+  { id: 'electricity', label: 'Electricity use', unit: 'kWh', factor: 0.70, icon: Zap, category: 'Home energy', hint: 'Electricity consumed' },
+  { id: 'waste', label: 'General waste', unit: 'kg', factor: 0.50, icon: Recycle, category: 'Waste', hint: 'Waste sent to landfill (rough estimate)' },
+  { id: 'flight', label: 'Air travel', unit: 'passenger-km', factor: 0.15, icon: Wind, category: 'Transport', hint: 'Approximate passenger distance flown' },
+];
+
+const climateNews = [
+  {
+    mood: 'POSITIVE DEVELOPMENT',
+    kind: 'good',
+    title: "India's power-sector emissions flat for two years amid clean-energy growth",
+    summary: 'Carbon Brief reports that growth in clean electricity helped hold power-sector emissions steady, while the transition still has work to do.',
+    source: 'Carbon Brief',
+    date: '17 Sep 2026',
+    url: 'https://www.carbonbrief.org/topics/renewables',
+  },
+  {
+    mood: 'CHALLENGE TO WATCH',
+    kind: 'watch',
+    title: 'Grid limits are wasting some of India’s solar electricity',
+    summary: 'Reuters reported that transmission constraints prevented some generated solar power from being used, showing why grid upgrades matter alongside new capacity.',
+    source: 'Reuters',
+    date: '12 Oct 2026',
+    url: 'https://www.reuters.com/business/energy/india-wastes-4-solar-power-amid-power-shortages-july-august-report-shows-2026-10-12/',
+  },
+  {
+    mood: 'NATURE UNDER PRESSURE',
+    kind: 'watch',
+    title: 'Amazon fires surge amid dry conditions and climate pressures',
+    summary: 'Reuters reports rising fire activity in Brazil’s Amazonas region, highlighting risks to communities, air quality and biodiversity.',
+    source: 'Reuters',
+    date: '14 Oct 2026',
+    url: 'https://www.reuters.com/business/environment/fires-surge-brazils-amazon-fueled-by-el-nio-climate-change-2026-10-14/',
+  },
+];
+
+function loadActivities() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('ecosphere-emissions') || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatKg(value) {
+  return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} kg`;
+}
+
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [form, setForm] = useState({ travel: '8', electricity: '3', diet: 'mixed' });
@@ -39,6 +92,34 @@ function App() {
     }
   });
   const [showAll, setShowAll] = useState(false);
+  const [activityLogs, setActivityLogs] = useState(loadActivities);
+  const [activityForm, setActivityForm] = useState({
+    type: 'car',
+    amount: '5',
+    date: new Date().toLocaleDateString('en-CA'),
+    note: '',
+  });
+  const [activityMessage, setActivityMessage] = useState('');
+  const selectedActivity = activityTypes.find(item => item.id === activityForm.type) || activityTypes[0];
+  const previewKg = Math.max(0, Number(activityForm.amount) || 0) * selectedActivity.factor;
+  const totalKg = activityLogs.reduce((sum, item) => sum + item.kg, 0);
+  const todayKey = new Date().toLocaleDateString('en-CA');
+  const todayKg = activityLogs.filter(item => item.date === todayKey).reduce((sum, item) => sum + item.kg, 0);
+  const last7 = Array.from({ length: 7 }, (_, index) => {
+    const day = new Date();
+    day.setDate(day.getDate() - (6 - index));
+    const key = day.toLocaleDateString('en-CA');
+    return {
+      key,
+      label: day.toLocaleDateString(undefined, { weekday: 'short' }),
+      kg: activityLogs.filter(item => item.date === key).reduce((sum, item) => sum + item.kg, 0),
+    };
+  });
+  const categoryTotals = [...new Set(activityTypes.map(type => type.category))].reduce((acc, category) => {
+    acc[category] = activityLogs.filter(item => item.category === category).reduce((sum, item) => sum + item.kg, 0);
+    return acc;
+  }, {});
+  const maxDayKg = Math.max(1, ...last7.map(day => day.kg));
 
   const progress = Math.round((done.length / actions.length) * 100);
   const footprint = useMemo(() => estimateFootprint(form), [form]);
@@ -76,6 +157,61 @@ function App() {
     }
   }
 
+  function updateActivityForm(key, value) {
+    setActivityForm(current => ({ ...current, [key]: value }));
+  }
+
+  function saveActivity(event) {
+    event.preventDefault();
+    const amount = Number(activityForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setActivityMessage('Enter an amount greater than zero.');
+      return;
+    }
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      type: selectedActivity.id,
+      label: selectedActivity.label,
+      category: selectedActivity.category,
+      amount,
+      unit: selectedActivity.unit,
+      kg: Number((amount * selectedActivity.factor).toFixed(3)),
+      factor: selectedActivity.factor,
+      date: activityForm.date || todayKey,
+      note: activityForm.note.trim(),
+    };
+    const next = [entry, ...activityLogs].slice(0, 500);
+    setActivityLogs(next);
+    try {
+      localStorage.setItem('ecosphere-emissions', JSON.stringify(next));
+      setActivityMessage('Activity saved on this device.');
+    } catch {
+      setActivityMessage('Saved for this session only; browser storage is unavailable.');
+    }
+    setActivityForm(current => ({ ...current, amount: '', note: '' }));
+  }
+
+  function deleteActivity(id) {
+    const next = activityLogs.filter(item => item.id !== id);
+    setActivityLogs(next);
+    try {
+      localStorage.setItem('ecosphere-emissions', JSON.stringify(next));
+    } catch {
+      // Keep the in-memory update even when browser storage is unavailable.
+    }
+  }
+
+  function clearActivities() {
+    if (!window.confirm('Delete all saved activity records from this browser?')) return;
+    setActivityLogs([]);
+    try {
+      localStorage.removeItem('ecosphere-emissions');
+      setActivityMessage('All activity records cleared.');
+    } catch {
+      setActivityMessage('Records cleared for this session.');
+    }
+  }
+
   function jumpTo(id) {
     setMenuOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -93,6 +229,8 @@ function App() {
         </button>
         <nav className={menuOpen ? 'nav nav-open' : 'nav'}>
           <a href="#impact" onClick={() => setMenuOpen(false)}>Your impact</a>
+          <a href="#tracker" onClick={() => setMenuOpen(false)}>Track data</a>
+          <a href="#news" onClick={() => setMenuOpen(false)}>Climate pulse</a>
           <a href="#actions" onClick={() => setMenuOpen(false)}>Take action</a>
           <a href="#learn" onClick={() => setMenuOpen(false)}>Explore</a>
           <button className="nav-cta" onClick={() => jumpTo('impact')}>Start your journey <ArrowRight size={16} /></button>
@@ -172,6 +310,73 @@ function App() {
           </div>
         </section>
 
+
+        <section className="tracker-section section-pad" id="tracker">
+          <div className="section-heading">
+            <div><div className="eyebrow"><span className="eyebrow-dot" /> YOUR ACTIVITY, YOUR DATA</div><h2>Track the things<br /><em>that add up.</em></h2></div>
+            <p>Log everyday activities and see an illustrative CO₂-equivalent estimate. Records stay in this browser on this device.</p>
+          </div>
+
+          <div className="tracker-stats">
+            <article className="tracker-stat"><span>ALL LOGGED ACTIVITIES</span><strong>{activityLogs.length}</strong><small>Entries saved locally</small></article>
+            <article className="tracker-stat"><span>ESTIMATED TODAY</span><strong>{formatKg(todayKg)}</strong><small>From your logged activities</small></article>
+            <article className="tracker-stat"><span>ALL-TIME LOGGED TOTAL</span><strong>{formatKg(totalKg)}</strong><small>Not a complete personal footprint</small></article>
+          </div>
+
+          <div className="tracker-layout">
+            <div className="activity-form-card">
+              <div className="card-topline"><span><Activity size={16} /> ADD AN ACTIVITY</span><Plus size={18}/></div>
+              <form onSubmit={saveActivity}>
+                <label htmlFor="activity-type">Activity</label>
+                <select id="activity-type" value={activityForm.type} onChange={e => updateActivityForm('type', e.target.value)}>
+                  {activityTypes.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
+                </select>
+                <p className="activity-hint">{selectedActivity.hint}</p>
+                <label htmlFor="activity-amount">Amount <span>{selectedActivity.unit}</span></label>
+                <div className="input-wrap"><input id="activity-amount" type="number" min="0.01" step="any" value={activityForm.amount} onChange={e => updateActivityForm('amount', e.target.value)} required /><span>{selectedActivity.unit}</span></div>
+                <label htmlFor="activity-date">Date</label>
+                <div className="input-wrap date-input"><input id="activity-date" type="date" value={activityForm.date} onChange={e => updateActivityForm('date', e.target.value)} required /><CalendarDays size={16}/></div>
+                <label htmlFor="activity-note">Note <span>optional</span></label>
+                <input className="note-input" id="activity-note" type="text" maxLength="100" placeholder="e.g. commute to campus" value={activityForm.note} onChange={e => updateActivityForm('note', e.target.value)} />
+                <div className="estimate-preview"><span>Estimated emissions</span><strong>{formatKg(previewKg)} CO₂e</strong></div>
+                <button className="button button-lime calc-button" type="submit">Save activity <Plus size={17}/></button>
+                {activityMessage && <p className="form-feedback" role="status">{activityMessage}</p>}
+              </form>
+            </div>
+
+            <div className="activity-insights">
+              <div className="insight-panel">
+                <div className="insight-title"><div><span className="eyebrow">LAST 7 DAYS</span><h3>Emission trend</h3></div><TrendingUp size={21}/></div>
+                <div className="trend-chart" role="img" aria-label="Estimated logged emissions over the last seven days">
+                  {last7.map(day => <div className="trend-column" key={day.key} title={`${day.key}: ${formatKg(day.kg)}`}>
+                    <span className="trend-value">{day.kg ? day.kg.toFixed(1) : '—'}</span>
+                    <div className="trend-bar-track"><span style={{ height: `${day.kg ? Math.max(5, (day.kg / maxDayKg) * 100) : 0}%` }} /></div>
+                    <small>{day.label}</small>
+                  </div>)}
+                </div>
+                <p className="chart-caption">Only activities you log are included. An empty day does not mean zero real-world emissions.</p>
+              </div>
+              <div className="insight-panel category-panel">
+                <div className="insight-title"><div><span className="eyebrow">WHERE IT COMES FROM</span><h3>Category breakdown</h3></div><Earth size={21}/></div>
+                {Object.entries(categoryTotals).map(([category, kg]) => <div className="category-row" key={category}>
+                  <div><span>{category}</span><strong>{formatKg(kg)}</strong></div>
+                  <div className="category-track"><span style={{ width: `${totalKg ? (kg / totalKg) * 100 : 0}%` }} /></div>
+                </div>)}
+                <p className="chart-caption">Breakdown of your saved records, not a full life-cycle analysis.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="activity-history">
+            <div className="history-heading"><div><span className="eyebrow">YOUR RECORDS</span><h3>Recent activities</h3></div><button className="reset-actions" type="button" disabled={!activityLogs.length} onClick={clearActivities}>Clear all records</button></div>
+            {activityLogs.length === 0 ? <div className="empty-activity"><Leaf size={22}/><strong>Your activity log starts here.</strong><span>Add your first activity to build a personal record.</span></div> :
+              <div className="activity-table-wrap"><table className="activity-table"><thead><tr><th>Activity</th><th>Date</th><th>Amount</th><th>Estimated CO₂e</th><th><span className="sr-only">Delete</span></th></tr></thead><tbody>
+                {activityLogs.slice(0, 12).map(item => <tr key={item.id}><td><strong>{item.label}</strong>{item.note && <small>{item.note}</small>}</td><td>{item.date}</td><td>{item.amount} {item.unit}</td><td><strong>{formatKg(item.kg)}</strong></td><td><button className="delete-entry" type="button" aria-label={`Delete ${item.label} entry`} onClick={() => deleteActivity(item.id)}><Trash2 size={16}/></button></td></tr>)}
+              </tbody></table></div>}
+          </div>
+          <p className="tracker-disclaimer">Method note: starter factors are simplified illustrative defaults, not official location-specific factors. Real emissions vary by grid mix, vehicle, occupancy, waste treatment and methodology. Use verified local factors before research or policy decisions.</p>
+        </section>
+
         <section className="actions-section section-pad" id="actions">
           <div className="section-heading action-heading">
             <div><div className="eyebrow"><span className="eyebrow-dot" /> SMALL ACTIONS, REAL MOMENTUM</div><h2>Make today a little<br /><em>greener.</em></h2></div>
@@ -210,6 +415,22 @@ function App() {
             <a href="https://climate.nasa.gov/" target="_blank" rel="noreferrer">NASA Climate Change <ArrowRight size={14}/></a>
             <a href="https://www.un.org/en/climatechange" target="_blank" rel="noreferrer">United Nations — Climate Action <ArrowRight size={14}/></a>
           </div>}
+        </section>
+
+
+        <section className="news-section section-pad" id="news">
+          <div className="section-heading">
+            <div><div className="eyebrow"><span className="eyebrow-dot" /> CLIMATE PULSE</div><h2>Reasons for hope.<br /><em>Reasons to act.</em></h2></div>
+            <p>Climate progress and climate risks can happen at the same time. These dated reports link to their publishers so you can read the full context.</p>
+          </div>
+          <div className="news-grid">
+            {climateNews.map(item => <article className={`news-card news-${item.kind}`} key={item.title}>
+              <div className="news-card-top"><span className="news-label">{item.kind === 'good' ? <Sprout size={15}/> : <CloudSun size={15}/>} {item.mood}</span><span className="news-date">{item.date}</span></div>
+              <h3>{item.title}</h3><p>{item.summary}</p>
+              <div className="news-card-bottom"><span>{item.source}</span><a href={item.url} target="_blank" rel="noreferrer">Read report <ExternalLink size={14}/></a></div>
+            </article>)}
+          </div>
+          <div className="news-source-note"><Newspaper size={19}/><span><strong>Stay informed, check the evidence.</strong><br/>Headlines are a snapshot, not the whole story. Open the publisher links for full reporting and updates.</span><a href="https://www.carbonbrief.org/" target="_blank" rel="noreferrer">More climate coverage <ArrowRight size={15}/></a></div>
         </section>
 
         <section className="closing-cta">
